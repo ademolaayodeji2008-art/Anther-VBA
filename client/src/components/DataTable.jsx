@@ -20,12 +20,17 @@ export function DataTable({
     );
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    // w-full + overflow-x-auto on the wrapper ensures the table scrolls horizontally
+    // rather than pushing content outside the viewport
+    <div className="w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50">
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className="whitespace-nowrap px-4 py-2.5 text-left font-medium text-slate-600">
+              <th
+                key={col.key}
+                className="whitespace-nowrap px-4 py-2.5 text-left font-medium text-slate-600"
+              >
                 {col.header}
               </th>
             ))}
@@ -39,7 +44,11 @@ export function DataTable({
               className={onRowClick ? "cursor-pointer hover:bg-slate-50" : "hover:bg-slate-50/60"}
             >
               {columns.map((col) => (
-                <td key={col.key} className="whitespace-nowrap px-4 py-2 text-slate-700">
+                <td
+                  key={col.key}
+                  className="max-w-xs truncate px-4 py-2 text-slate-700"
+                  title={typeof row[col.key] === "string" ? row[col.key] : undefined}
+                >
                   {col.render ? col.render(row) : (row[col.key] ?? "—")}
                 </td>
               ))}

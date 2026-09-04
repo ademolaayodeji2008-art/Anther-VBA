@@ -25,7 +25,24 @@ import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true }));
+  // CLIENT_ORIGIN supports multiple comma-separated origins for flexibility
+  // e.g. "https://anther-vpr.vercel.app,http://localhost:5173"
+  const allowedOrigins = (process.env.CLIENT_ORIGIN ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Render health checks)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json());
   app.use(cookieParser());
 

@@ -105,12 +105,15 @@ export function Layout() {
   const { user, logout, hasPermission, hasAnyPermission } = useAuth();
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <aside className="w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
-        <div className="border-b border-slate-100 p-4">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      {/* Sidebar — fixed height, independent scroll */}
+      <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
+        {/* Logo — always visible, never scrolls away */}
+        <div className="shrink-0 border-b border-slate-100 p-4">
           <Logo size="sm" />
         </div>
-        <nav className="space-y-6 p-4">
+        {/* Nav — scrollable independently of page content */}
+        <nav className="flex-1 space-y-6 overflow-y-auto p-4">
           {NAV_SECTIONS.map((section) => {
             const items = section.items.filter((item) => isVisible(item, hasPermission, hasAnyPermission));
             if (!items.length) return null;
@@ -144,8 +147,11 @@ export function Layout() {
           })}
         </nav>
       </aside>
-      <div className="flex-1">
-        <header className="flex items-center justify-end gap-3 border-b border-slate-200 bg-white px-6 py-3">
+
+      {/* Right side — header + scrollable page content */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Header — always visible at top */}
+        <header className="shrink-0 flex items-center justify-end gap-3 border-b border-slate-200 bg-white px-6 py-3">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
               {initials(user?.name)}
@@ -159,7 +165,9 @@ export function Layout() {
             Sign out
           </button>
         </header>
-        <main className="p-6">
+
+        {/* Main content — scrolls independently, constrained to remaining height */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">
           <Outlet />
         </main>
       </div>

@@ -6,7 +6,14 @@ export const setAccessToken = (token) => {
 };
 export const getAccessToken = () => accessToken;
 
-export const api = axios.create({ baseURL: "/api", withCredentials: true });
+// In development Vite proxies /api → localhost:4000, so baseURL stays "/api".
+// In production (Vercel) VITE_API_URL must be set to the Render server URL
+// e.g. https://anther-vpr.onrender.com — the /api prefix is appended here.
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
+
+export const api = axios.create({ baseURL, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   if (accessToken) {
