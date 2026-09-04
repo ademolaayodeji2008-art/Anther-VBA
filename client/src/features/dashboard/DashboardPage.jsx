@@ -36,7 +36,7 @@ export function DashboardPage() {
         <p className="text-slate-500">Loading…</p>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Today's Sales" value={formatCurrency(data.todaySales)} tone="success" icon={TrendingUp} />
             <StatCard label="Today's Purchases" value={formatCurrency(data.todayPurchases)} icon={ShoppingBag} />
             <StatCard label="Receivables Outstanding" value={formatCurrency(data.receivablesTotal)} tone="warning" icon={Wallet} />

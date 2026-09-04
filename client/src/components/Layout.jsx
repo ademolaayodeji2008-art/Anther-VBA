@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -23,6 +24,8 @@ import {
   UserCog,
   ShieldCheck,
   Receipt,
+  Menu,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./Logo";
@@ -93,81 +96,124 @@ function isVisible(item, hasPermission, hasAnyPermission) {
 }
 
 function initials(name = "") {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function SidebarContent({ onNavClick, hasPermission, hasAnyPermission }) {
+  return (
+    <nav className="flex-1 space-y-5 overflow-y-auto p-4">
+      {NAV_SECTIONS.map((section) => {
+        const items = section.items.filter((item) => isVisible(item, hasPermission, hasAnyPermission));
+        if (!items.length) return null;
+        return (
+          <div key={section.title}>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {section.title}
+            </p>
+            <ul className="space-y-0.5">
+              {items.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end
+                    onClick={onNavClick}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-sm transition-colors ${
+                        isActive
+                          ? "border-brand-600 bg-brand-50 font-medium text-brand-700"
+                          : "border-transparent text-slate-600 hover:bg-slate-100"
+                      }`
+                    }
+                  >
+                    <item.icon size={16} className="shrink-0" />
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  );
 }
 
 export function Layout() {
   const { user, logout, hasPermission, hasAnyPermission } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Sidebar — fixed height, independent scroll */}
-      <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-        {/* Logo — always visible, never scrolls away */}
-        <div className="shrink-0 border-b border-slate-100 p-4">
+
+      {/* ── Mobile overlay ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:static lg:translate-x-0`}
+      >
+        {/* Logo + mobile close button */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4">
           <Logo size="sm" />
+          <button
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={18} />
+          </button>
         </div>
-        {/* Nav — scrollable independently of page content */}
-        <nav className="flex-1 space-y-6 overflow-y-auto p-4">
-          {NAV_SECTIONS.map((section) => {
-            const items = section.items.filter((item) => isVisible(item, hasPermission, hasAnyPermission));
-            if (!items.length) return null;
-            return (
-              <div key={section.title}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  {section.title}
-                </p>
-                <ul className="space-y-0.5">
-                  {items.map((item) => (
-                    <li key={item.to}>
-                      <NavLink
-                        to={item.to}
-                        end
-                        className={({ isActive }) =>
-                          `flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-1.5 text-sm transition-colors ${
-                            isActive
-                              ? "border-brand-600 bg-brand-50 font-medium text-brand-700"
-                              : "border-transparent text-slate-600 hover:bg-slate-100"
-                          }`
-                        }
-                      >
-                        <item.icon size={16} className="shrink-0" />
-                        {item.label}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
+
+        <SidebarContent
+          onNavClick={() => setSidebarOpen(false)}
+          hasPermission={hasPermission}
+          hasAnyPermission={hasAnyPermission}
+        />
       </aside>
 
-      {/* Right side — header + scrollable page content */}
+      {/* ── Right panel ── */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header — always visible at top */}
-        <header className="shrink-0 flex items-center justify-end gap-3 border-b border-slate-200 bg-white px-6 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
-              {initials(user?.name)}
-            </div>
-            <span className="text-sm text-slate-600">{user?.name}</span>
-          </div>
+
+        {/* Header */}
+        <header className="shrink-0 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
+          {/* Hamburger — mobile only */}
           <button
-            onClick={logout}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
           >
-            Sign out
+            <Menu size={20} />
           </button>
+
+          {/* Logo visible on mobile when sidebar is closed */}
+          <div className="lg:hidden">
+            <Logo size="sm" />
+          </div>
+
+          {/* User info + sign out */}
+          <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                {initials(user?.name)}
+              </div>
+              <span className="hidden text-sm text-slate-600 sm:inline">{user?.name}</span>
+            </div>
+            <button
+              onClick={logout}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              Sign out
+            </button>
+          </div>
         </header>
 
-        {/* Main content — scrolls independently, constrained to remaining height */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
           <Outlet />
         </main>
       </div>
