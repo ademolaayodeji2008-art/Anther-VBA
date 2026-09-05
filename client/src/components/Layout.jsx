@@ -111,6 +111,8 @@ function OrgSwitcher({ currentUser }) {
     queryKey: ["my-orgs"],
     queryFn: async () => (await api.get("/auth/orgs")).data,
     staleTime: 5 * 60 * 1000,
+    // Only fetch when the user is actually authenticated — avoids 401/404 on the login page
+    enabled: !!currentUser,
   });
 
   // Only render if user belongs to more than one org
