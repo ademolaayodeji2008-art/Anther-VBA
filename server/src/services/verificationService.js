@@ -1,40 +1,55 @@
-import crypto from "node:crypto";
-import User from "../models/User.js";
+import crypto from "crypto";
 import { sendVerificationEmail } from "./mailerService.js";
 
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function hashToken(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+/**
+ * Generates and stores a verification token for the given user,
+ * then sends the verification email.
+ *
+ * @param {Document} user - PlatformUser document
+ * @param {Model} PlatformUser - the PlatformUser model (injected to avoid circular imports)
+ */
+export async function issueVerificationEmail(user, PlatformUser) {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+  // Use findByIdAndUpdate to avoid triggering full model validation on save
+  await PlatformUser.findByIdAndUpdate(user._id, {
+    verificationTokenHash: hash,
+    verificationTokenExpires: new Date(Date.now() + TOKEN_TTL_MS),
+  });
+
+  await sendVerificationEmail(user, rawToken);
 }
 
-/** Generates a verification token for the user, stores its hash, and emails the raw token as a link. */
-export async function issueVerificationEmail(user) {
-  const token = crypto.randomBytes(32).toString("hex");
-  user.verificationTokenHash = hashToken(token);
-  user.verificationTokenExpires = new Date(Date.now() + TOKEN_TTL_MS);
-  await user.save();
-  return sendVerificationEmail(user, token);
-}
-
-/** Verifies a submitted token against the stored hash + expiry; marks the user verified on success. */
-export async function verifyEmailToken(email, token) {
-  const user = await User.findOne({ email }).select(
+/**
+ * Verifies the submitted token against the stored hash.
+ *
+ * @param {string} email
+ * @param {string} rawToken
+ * @param {Model} PlatformUser - injected model
+ */
+export async function verifyEmailToken(email, rawToken, PlatformUser) {
+  const user = await PlatformUser.findOne({ email }).select(
     "+verificationTokenHash +verificationTokenExpires"
   );
-  if (!user || !user.verificationTokenHash || !user.verificationTokenExpires) {
-    return { ok: false, reason: "No pending verification for this email" };
+
+  if (!user) return { ok: false, reason: "No account found with that email address." };
+  if (!user.verificationTokenHash) return { ok: false, reason: "No pending verification for this account." };
+  if (!user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
+    return { ok: false, reason: "Verification link has expired. Please request a new one." };
   }
-  if (user.verificationTokenExpires < new Date()) {
-    return { ok: false, reason: "Verification link has expired" };
-  }
-  if (user.verificationTokenHash !== hashToken(token)) {
-    return { ok: false, reason: "Invalid verification token" };
+
+  const submittedHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  if (submittedHash !== user.verificationTokenHash) {
+    return { ok: false, reason: "Invalid verification token." };
   }
 
   user.emailVerified = true;
   user.verificationTokenHash = undefined;
   user.verificationTokenExpires = undefined;
   await user.save();
+
   return { ok: true, user };
 }

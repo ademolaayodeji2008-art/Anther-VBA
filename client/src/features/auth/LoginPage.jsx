@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../../context/AuthContext";
 import { Logo } from "../../components/Logo";
@@ -7,21 +7,21 @@ import { Logo } from "../../components/Logo";
 export function LoginPage() {
   const { login, status } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [serverError, setServerError] = useState(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
 
   if (status === "authenticated") return <Navigate to="/dashboard" replace />;
 
   const onSubmit = async ({ email, password }) => {
     setServerError(null);
     try {
-      await login(email, password);
-      navigate("/dashboard", { replace: true });
+      const result = await login(email, password);
+      if (result.requiresOrgSelection) {
+        // Multiple orgs — go to the org picker
+        navigate("/select-org", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       setServerError(err.response?.data?.message ?? "Login failed");
     }
@@ -35,12 +35,6 @@ export function LoginPage() {
       >
         <Logo />
         <h1 className="text-lg font-semibold text-slate-900">Sign in</h1>
-
-        {searchParams.get("closed") === "1" && (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Signup is closed — ask your administrator for an invite.
-          </p>
-        )}
 
         <div>
           <label className="block text-sm font-medium text-slate-700">Email</label>
@@ -59,9 +53,7 @@ export function LoginPage() {
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             {...register("password", { required: "Password is required" })}
           />
-          {errors.password && (
-            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-          )}
+          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
         </div>
 
         {serverError && <p className="text-sm text-red-600">{serverError}</p>}

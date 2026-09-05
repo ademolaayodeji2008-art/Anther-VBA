@@ -6,6 +6,7 @@ import { Layout } from "./components/Layout";
 import { LoginPage } from "./features/auth/LoginPage";
 import { SignupPage } from "./features/auth/SignupPage";
 import { VerifyEmailPage } from "./features/auth/VerifyEmailPage";
+import { SelectOrgPage } from "./features/auth/SelectOrgPage";
 import { LandingPage } from "./features/landing/LandingPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { CustomersPage } from "./features/customers/CustomersPage";
@@ -30,6 +31,7 @@ import { InventoryReportPage } from "./features/reports/InventoryReportPage";
 import { UsersPage } from "./features/admin/UsersPage";
 import { RolesPage } from "./features/admin/RolesPage";
 import { ExpensesPage } from "./features/expenses/ExpensesPage";
+import { PlatformAdminPage } from "./features/platformAdmin/PlatformAdminPage";
 
 // Central failure surface: without this, a rejected create/update mutation just leaves its modal
 // open with no visible feedback — the user has no way to know why nothing happened.
@@ -51,6 +53,8 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/select-org" element={<SelectOrgPage />} />
+            <Route path="/platform-admin" element={<PlatformAdminPage />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />

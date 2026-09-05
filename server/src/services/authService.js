@@ -9,18 +9,30 @@ export async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
-export function signAccessToken(user) {
+/**
+ * Signs an access token scoped to a specific org.
+ * Payload: { sub: userId, orgSlug, permissions[] }
+ * Short-lived (default 15m).
+ */
+export function signAccessToken(user, orgSlug, permissions) {
   return jwt.sign(
-    { sub: user._id.toString(), permissions: user.permissions },
+    { sub: user._id.toString(), orgSlug, permissions: permissions ?? [] },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_TTL ?? "15m" }
   );
 }
 
-export function signRefreshToken(user) {
-  return jwt.sign({ sub: user._id.toString() }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_TTL ?? "7d",
-  });
+/**
+ * Signs a refresh token. Carries userId + orgSlug so refresh can re-issue
+ * a correctly scoped access token without a second DB lookup for the org.
+ * Long-lived (default 7d).
+ */
+export function signRefreshToken(user, orgSlug) {
+  return jwt.sign(
+    { sub: user._id.toString(), orgSlug },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_TTL ?? "7d" }
+  );
 }
 
 export function verifyAccessToken(token) {

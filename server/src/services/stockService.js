@@ -1,8 +1,7 @@
-import StockMovement from "../models/StockMovement.js";
-import Item from "../models/Item.js";
+import { getModels } from "../tenant/tenantDb.js";
 
-/** Returns a Map of itemId(string) -> current stock on hand, summed from the movement ledger. */
-export async function getStockLevels(itemIds) {
+export async function getStockLevels(tenantDb, itemIds) {
+  const { StockMovement } = getModels(tenantDb);
   const match = itemIds?.length ? { item: { $in: itemIds } } : {};
   const rows = await StockMovement.aggregate([
     { $match: match },
@@ -11,19 +10,21 @@ export async function getStockLevels(itemIds) {
   return new Map(rows.map((r) => [r._id.toString(), r.qty]));
 }
 
-export async function getStockLevel(itemId) {
-  const levels = await getStockLevels([itemId]);
+export async function getStockLevel(tenantDb, itemId) {
+  const levels = await getStockLevels(tenantDb, [itemId]);
   return levels.get(itemId.toString()) ?? 0;
 }
 
-export async function recordStockMovement(data, options) {
+export async function recordStockMovement(tenantDb, data, options) {
+  const { StockMovement } = getModels(tenantDb);
   const [doc] = await StockMovement.create([data], options);
   return doc;
 }
 
-export async function listItemsWithStock(filter, { skip = 0, limit = 50, sort = { name: 1 } } = {}) {
+export async function listItemsWithStock(tenantDb, filter, { skip = 0, limit = 50, sort = { name: 1 } } = {}) {
+  const { Item } = getModels(tenantDb);
   const items = await Item.find(filter).sort(sort).skip(skip).limit(limit);
-  const levels = await getStockLevels(items.map((i) => i._id));
+  const levels = await getStockLevels(tenantDb, items.map((i) => i._id));
   return items.map((item) => ({
     ...item.toObject(),
     stockOnHand: levels.get(item._id.toString()) ?? 0,

@@ -1,64 +1,31 @@
 import mongoose from "mongoose";
-import PurchaseOrder from "../models/PurchaseOrder.js";
-import { nextSequence } from "../models/Counter.js";
+import { getModels, nextSequence } from "../tenant/tenantDb.js";
 import { formatSequence } from "../utils/numbering.js";
 import { recordStockMovement } from "./stockService.js";
 import { postBankTransaction } from "./bankLedgerService.js";
 
-/**
- * Creates a purchase order, and — only when status is POSTED (matching the VBA's
- * Delivered/Not Yet Delivered distinction) — increments stock per line and, for BANK payments,
- * posts a matching withdrawal to the bank ledger. All writes happen in one transaction.
- */
-export async function createPurchaseOrder(input, { postedBy }) {
+export async function createPurchaseOrder(tenantDb, input, { postedBy }) {
   const session = await mongoose.startSession();
   try {
     let order;
     await session.withTransaction(async () => {
-      const seq = await nextSequence("BILL", { session });
+      const { PurchaseOrder } = getModels(tenantDb);
+      const seq = await nextSequence(tenantDb, "BILL", session);
       const billNo = formatSequence("BILL", seq);
       const items = input.items.map((line) => ({ ...line, lineTotal: line.qty * line.unitPrice }));
-      const total = items.reduce((sum, line) => sum + line.lineTotal, 0);
+      const total = items.reduce((sum, l) => sum + l.lineTotal, 0);
 
       [order] = await PurchaseOrder.create(
-        [
-          {
-            billNo,
-            date: input.date,
-            vendor: input.vendor,
-            items,
-            category: input.category,
-            paymentType: input.paymentType,
-            bank: input.bank,
-            status: input.status ?? "POSTED",
-            total,
-            postedBy,
-          },
-        ],
+        [{ billNo, date: input.date, vendor: input.vendor, items, category: input.category, paymentType: input.paymentType, bank: input.bank, status: input.status ?? "POSTED", total, postedBy }],
         { session }
       );
 
       if (order.status === "POSTED") {
         for (const line of items) {
-          await recordStockMovement(
-            { item: line.item, qty: line.qty, type: "PURCHASE", sourceRef: billNo, createdBy: postedBy },
-            { session }
-          );
+          await recordStockMovement(tenantDb, { item: line.item, qty: line.qty, type: "PURCHASE", sourceRef: billNo, createdBy: postedBy }, { session });
         }
         if (order.paymentType === "BANK") {
-          await postBankTransaction(
-            {
-              bank: order.bank,
-              type: "EXPENSE",
-              withdrawal: total,
-              date: order.date,
-              ref: billNo,
-              sourceModule: "PurchaseOrder",
-              narration: `Purchase bill ${billNo}`,
-              postedBy,
-            },
-            { session }
-          );
+          await postBankTransaction(tenantDb, { bank: order.bank, type: "EXPENSE", withdrawal: total, date: order.date, ref: billNo, sourceModule: "PurchaseOrder", narration: `Purchase bill ${billNo}`, postedBy }, { session });
         }
       }
     });

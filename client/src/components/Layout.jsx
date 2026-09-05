@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Users,
@@ -26,8 +27,11 @@ import {
   Receipt,
   Menu,
   X,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../api/client";
 import { Logo } from "./Logo";
 
 const NAV_SECTIONS = [
@@ -99,6 +103,57 @@ function initials(name = "") {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
+function OrgSwitcher({ currentUser }) {
+  const { switchOrg } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  const { data: orgs } = useQuery({
+    queryKey: ["my-orgs"],
+    queryFn: async () => (await api.get("/auth/orgs")).data,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Only render if user belongs to more than one org
+  if (!orgs || orgs.length <= 1) return null;
+
+  const currentOrg = orgs.find((o) => o.isCurrent);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        <Building2 size={14} className="text-slate-400" />
+        <span className="max-w-[120px] truncate">{currentOrg?.businessName || currentOrg?.name || "Switch org"}</span>
+        <ChevronDown size={13} className="text-slate-400" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+            <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Organizations</p>
+            {orgs.map((org) => (
+              <button
+                key={org._id}
+                onClick={() => { setOpen(false); if (!org.isCurrent) switchOrg(org._id); }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-50"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-100 text-xs font-bold text-brand-700">
+                  {(org.businessName || org.name)[0].toUpperCase()}
+                </div>
+                <span className="flex-1 truncate text-slate-700">{org.businessName || org.name}</span>
+                {org.isCurrent && <Check size={13} className="text-brand-600" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SidebarContent({ onNavClick, hasPermission, hasAnyPermission }) {
   return (
     <nav className="flex-1 space-y-5 overflow-y-auto p-4">
@@ -159,11 +214,16 @@ export function Layout() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
           lg:static lg:translate-x-0`}
       >
-        {/* Logo + mobile close button */}
+        {/* Logo + org name + mobile close button */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4">
-          <Logo size="sm" />
+          <div className="min-w-0">
+            <Logo size="sm" />
+            {user?.org?.name && (
+              <p className="mt-0.5 truncate text-xs text-slate-400">{user.org.name}</p>
+            )}
+          </div>
           <button
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 lg:hidden"
+            className="ml-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
             <X size={18} />
@@ -195,8 +255,9 @@ export function Layout() {
             <Logo size="sm" />
           </div>
 
-          {/* User info + sign out */}
+          {/* User info + org switcher + sign out */}
           <div className="ml-auto flex items-center gap-3">
+            <OrgSwitcher currentUser={user} />
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
                 {initials(user?.name)}

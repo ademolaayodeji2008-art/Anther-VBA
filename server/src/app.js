@@ -20,6 +20,7 @@ import returnRoutes from "./routes/returnRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import fabricOptionsRoutes from "./routes/fabricOptionsRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
+import platformAdminRoutes from "./routes/platformAdminRoutes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 export function createApp() {
@@ -66,6 +67,7 @@ export function createApp() {
   app.use("/api/reports", reportRoutes);
   app.use("/api/fabric-options", fabricOptionsRoutes);
   app.use("/api/expenses", expenseRoutes);
+  app.use("/api/platform-admin", platformAdminRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
