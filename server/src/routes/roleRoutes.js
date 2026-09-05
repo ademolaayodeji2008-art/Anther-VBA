@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { listRoles, createRole, updateRole, roleSchema } from "../controllers/roleController.js";
+import { listRoles, listPermissions } from "../controllers/roleController.js";
 import { authenticate, requirePermission } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 
 const router = Router();
 
-router.use(authenticate, requirePermission("roles:manage"));
-router.get("/", listRoles);
-router.post("/", validate(roleSchema), createRole);
-router.patch("/:id", updateRole);
+// List roles — any authenticated user can see the role list (used in user management forms)
+router.get("/", authenticate, listRoles);
+
+// List all available permissions — Super Admin only, used in admin UI
+router.get("/permissions", authenticate, requirePermission("roles:manage"), listPermissions);
 
 export default router;
