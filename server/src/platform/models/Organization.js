@@ -9,7 +9,7 @@ const organizationSchema = new Schema(
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     // Owner is the platform user who created this org
-    owner: { type: Schema.Types.ObjectId, ref: "PlatformUser", required: true },
+    owner: { type: Schema.Types.ObjectId, ref: "PlatformUser" },
     active: { type: Boolean, default: true },
     // Settings stored per-org
     settings: {

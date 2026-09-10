@@ -4,7 +4,7 @@ export const organizationSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    owner: { type: Schema.Types.ObjectId, required: true },
+    owner: { type: Schema.Types.ObjectId },
     active: { type: Boolean, default: true },
     settings: {
       businessName: { type: String, trim: true },
