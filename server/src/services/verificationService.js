@@ -5,30 +5,31 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Generates and stores a verification token for the given user,
- * then sends the verification email.
+ * then attempts to send the verification email.
  *
- * @param {Document} user - PlatformUser document
- * @param {Model} PlatformUser - the PlatformUser model (injected to avoid circular imports)
+ * Email errors are caught and logged — they must NOT crash the signup flow.
+ * If email fails the user can request a resend later.
  */
 export async function issueVerificationEmail(user, PlatformUser) {
   const rawToken = crypto.randomBytes(32).toString("hex");
   const hash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
-  // Use findByIdAndUpdate to avoid triggering full model validation on save
   await PlatformUser.findByIdAndUpdate(user._id, {
     verificationTokenHash: hash,
     verificationTokenExpires: new Date(Date.now() + TOKEN_TTL_MS),
   });
 
-  await sendVerificationEmail(user, rawToken);
+  try {
+    await sendVerificationEmail(user, rawToken);
+  } catch (err) {
+    // Log but do not rethrow — signup must still complete successfully.
+    // The user can request a new verification email from the login page.
+    console.error(`[mailer] Failed to send verification email to ${user.email}:`, err.message);
+  }
 }
 
 /**
  * Verifies the submitted token against the stored hash.
- *
- * @param {string} email
- * @param {string} rawToken
- * @param {Model} PlatformUser - injected model
  */
 export async function verifyEmailToken(email, rawToken, PlatformUser) {
   const user = await PlatformUser.findOne({ email }).select(

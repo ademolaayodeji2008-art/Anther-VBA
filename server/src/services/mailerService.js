@@ -5,8 +5,8 @@ let transporter;
 function getTransporter() {
   if (transporter) return transporter;
 
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const secure = port === 465; // SSL for 465, STARTTLS for 587
+  const port = Number(process.env.SMTP_PORT) || 465;
+  const secure = port === 465;
 
   transporter =
     process.env.NODE_ENV === "test"
@@ -16,6 +16,10 @@ function getTransporter() {
           port,
           secure,
           auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+          // Explicit timeouts so Render doesn't hang if SMTP is blocked
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000,
         });
   return transporter;
 }

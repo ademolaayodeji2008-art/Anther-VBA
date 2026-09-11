@@ -131,8 +131,12 @@ export async function signup(req, res, next) {
     const tenantDb = await getTenantDb(slug);
     await ensureOrgRoles(tenantDb);
 
-    // Send verification email
-    await issueVerificationEmail(user, PlatformUser);
+    // Send verification email — wrapped so a mail failure never crashes signup
+    try {
+      await issueVerificationEmail(user, PlatformUser);
+    } catch (err) {
+      console.error("[signup] Email error (non-fatal):", err.message);
+    }
 
     res.status(201).json({
       message: "Account created. Please check your email to verify your account before signing in.",
